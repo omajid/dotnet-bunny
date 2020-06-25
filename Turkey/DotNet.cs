@@ -26,7 +26,7 @@ namespace Turkey
                 string output = p.StandardOutput.ReadToEnd();
                 var list = output
                     .Split("\n", StringSplitOptions.RemoveEmptyEntries)
-                    .Where(line => line.StartsWith("Microsoft.NETCore.App"))
+                    .Where(line => line.StartsWith("Microsoft.NETCore.App", StringComparison.Ordinal))
                     .Select(line => line.Split(" ")[1])
                     .Select(versionString => Version.Parse(versionString))
                     .OrderBy(x => x)
@@ -114,6 +114,11 @@ namespace Turkey
 
         private static async Task<ProcessResult> RunDotNetCommandAsync(DirectoryInfo workingDirectory, string[] commands, CancellationToken token)
         {
+            if (workingDirectory == null)
+            {
+                throw new ArgumentNullException(nameof(workingDirectory));
+            }
+
             var arguments = string.Join(" ", commands);
             ProcessStartInfo startInfo = new ProcessStartInfo()
             {
@@ -125,12 +130,14 @@ namespace Turkey
             };
 
             var process = Process.Start(startInfo);
-            StringWriter standardOutputWriter = new StringWriter();
-            StringWriter standardErrorWriter = new StringWriter();
-            await process.WaitForExitAsync(token, standardOutputWriter, standardErrorWriter);
-            int exitCode = exitCode = process.ExitCode;
+            using (StringWriter standardOutputWriter = new StringWriter())
+            using (StringWriter standardErrorWriter = new StringWriter())
+            {
+                await process.WaitForExitAsync(standardOutputWriter, standardErrorWriter, token);
+                int exitCode = exitCode = process.ExitCode;
 
-            return new ProcessResult(exitCode, standardOutputWriter.ToString(), standardErrorWriter.ToString());
+                return new ProcessResult(exitCode, standardOutputWriter.ToString(), standardErrorWriter.ToString());
+            }
         }
     }
 }

@@ -21,12 +21,12 @@ namespace Turkey
             }
 
             var parts = input.Split('.').ToList();
-            bool invalidParts = (from part in parts where part.Count() == 0 select part).Count() != 0;
+            bool invalidParts = (from part in parts where part.Length == 0 select part).Any();
             if (invalidParts)
             {
                 throw new FormatException();
             }
-            if (parts.Count() == 1)
+            if (parts.Count == 1)
             {
                 parts.Add("0");
             }
@@ -51,8 +51,8 @@ namespace Turkey
 
         private static int CompareTo(Version v1, Version v2)
         {
-            var minCount = Math.Min(v1.parts.Count(), v2.parts.Count());
-            var maxCount = Math.Max(v1.parts.Count(), v2.parts.Count());
+            var minCount = Math.Min(v1.parts.Count, v2.parts.Count);
+            var maxCount = Math.Max(v1.parts.Count, v2.parts.Count);
 
             for (int i = 0; i < minCount; i++)
             {
@@ -79,8 +79,8 @@ namespace Turkey
 
             for (int i = minCount; i < maxCount; i++)
             {
-                string part1 = v1.parts.Count() == maxCount ? v1.parts[i] : "0";
-                string part2 = v2.parts.Count() == maxCount ? v2.parts[i] : "0";
+                string part1 = v1.parts.Count == maxCount ? v1.parts[i] : "0";
+                string part2 = v2.parts.Count == maxCount ? v2.parts[i] : "0";
 
                 var success1 = int.TryParse(part1, out int intPart1);
                 var success2 = int.TryParse(part2, out int intPart2);
@@ -105,6 +105,11 @@ namespace Turkey
 
         public int CompareTo(object o)
         {
+            if (object.ReferenceEquals(o, null))
+            {
+                throw new ArgumentNullException(nameof(o));
+            }
+
             if (o.GetType() != typeof(Version))
             {
                 throw new ArgumentException("Can only compare versions");
@@ -112,6 +117,9 @@ namespace Turkey
 
             return CompareTo(this, (Version) o);
         }
+
+#pragma warning disable CA1062
+// The methods are not checking for nulls directly, because the CompareTo method they call will do that
 
         public int CompareTo(Version x) { return CompareTo(this, x); }
 
@@ -124,6 +132,8 @@ namespace Turkey
         public static bool operator <=(Version x, Version y) { return CompareTo(x, y) <= 0; }
 
         public static bool operator >=(Version x, Version y) { return CompareTo(x, y) >= 0; }
+
+#pragma warning restore CA1062
 
         public static bool operator ==(Version x, Version y)
         {
@@ -138,7 +148,19 @@ namespace Turkey
             return CompareTo(x, y) == 0;
         }
 
-        public static bool operator !=(Version x, Version y) { return CompareTo(x, y) != 0; }
+        public static bool operator !=(Version x, Version y)
+        {
+            if (object.ReferenceEquals(x, null) ^ object.ReferenceEquals(y, null))
+            {
+                return true;
+            }
+            else if (object.ReferenceEquals(x, null) && object.ReferenceEquals(y, null))
+            {
+                return false;
+            }
+
+            return CompareTo(x, y) != 0;
+        }
 
         public override bool Equals(object obj) { return (obj is Version) && (CompareTo(this, (Version)obj) == 0); }
 

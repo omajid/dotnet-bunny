@@ -1,0 +1,7 @@
+<RuleSet Name="Rules"
+         Description="Rules"
+         ToolsVersion="10.0">
+  <Rules AnalyzerId="Microsoft.CodeAnalysis.FxCopAnalyzers" RuleNamespace="Microsoft.CodeAnalysis.FxCopAnalyzers">
+    <Rule Id="CA2007" Action="None" />
+  </Rules>
+</RuleSet>

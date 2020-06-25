@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -8,7 +9,7 @@ using System.Xml;
 
 namespace Turkey
 {
-    public class TestOutputFormats
+    public static class TestOutputFormats
     {
         public class DotNetBunnyOutput : TestOutput
         {
@@ -21,7 +22,7 @@ namespace Turkey
 
             public async override Task AtStartupAsync()
             {
-                Console.WriteLine("\n\n(\\_/)\n(^_^)\n@(\")(\")\n\n".Replace("\n", Environment.NewLine));
+                Console.WriteLine("\n\n(\\_/)\n(^_^)\n@(\")(\")\n\n".Replace("\n", Environment.NewLine, StringComparison.Ordinal));
             }
 
             public async override Task AfterParsingTestAsync(string name, bool enabled)
@@ -34,6 +35,11 @@ namespace Turkey
 
             public async override Task AfterRunningTestAsync(string name, TestResult result, TimeSpan testTime)
             {
+                if (result == null)
+                {
+                    throw new ArgumentNullException(nameof(result));
+                }
+
                 string resultText;
                 switch (result.Status)
                 {
@@ -58,6 +64,11 @@ namespace Turkey
 
             public async override Task AfterRunningAllTestsAsync(TestResults results)
             {
+                if (results == null)
+                {
+                    throw new ArgumentNullException(nameof(results));
+                }
+
                 Console.WriteLine($"Total: {results.Total} Passed: {results.Passed} Failed: {results.Failed}");
             }
         }
@@ -74,13 +85,18 @@ namespace Turkey
 
             public async override Task AfterParsingTestAsync(string name, bool enabled)
             {
-                var nameText = string.Format("{0,-60}", name);
+                var nameText = string.Format(CultureInfo.InvariantCulture, "{0,-60}", name);
                 Console.Write(nameText);
             }
 
             public async override Task AfterRunningTestAsync(string name, TestResult result, TimeSpan testTime)
             {
-                string elapsedTime = testTime.TotalMilliseconds.ToString();
+                if (result == null)
+                {
+                    throw new ArgumentNullException(nameof(result));
+                }
+
+                string elapsedTime = testTime.TotalMilliseconds.ToString("#####.##", CultureInfo.InvariantCulture);
                 string resultOutput = null;
                 if (Console.IsOutputRedirected || Console.IsErrorRedirected)
                 {
@@ -108,6 +124,11 @@ namespace Turkey
 
             public async override Task AfterRunningAllTestsAsync(TestResults results)
             {
+                if (results == null)
+                {
+                    throw new ArgumentNullException(nameof(results));
+                }
+
                 Console.WriteLine($"Total: {results.Total} Passed: {results.Passed} Failed: {results.Failed}");
             }
         }
@@ -144,6 +165,11 @@ namespace Turkey
 
             public async override Task AfterRunningTestAsync(string name, TestResult result, TimeSpan testTime)
             {
+                if (result == null)
+                {
+                    throw new ArgumentNullException(nameof(result));
+                }
+
                 var testCase = new TestCase();
                 testCase.Name = name;
                 testCase.ClassName = "TestSuite";
@@ -167,8 +193,8 @@ namespace Turkey
 
                     writer.WriteStartElement("testsuite");
                     writer.WriteAttributeString("name", "dotnet");
-                    writer.WriteAttributeString("tests", _testCases.Count.ToString());
-                    writer.WriteAttributeString("failures", _testCases.Where(t => t.Failed).Count().ToString());
+                    writer.WriteAttributeString("tests", _testCases.Count().ToString("####0", CultureInfo.InvariantCulture));
+                    writer.WriteAttributeString("failures", _testCases.Where(t => t.Failed).Count().ToString("####0", CultureInfo.InvariantCulture));
                     writer.WriteAttributeString("errors", "0");
 
                     foreach (var testCase in _testCases)
@@ -219,7 +245,7 @@ namespace Turkey
                 }
             }
 
-            private string RemoveInvalidXmlCharacters(string input)
+            private static string RemoveInvalidXmlCharacters(string input)
             {
                 return Regex.Replace(input, @"[\u0000-\u0008,\u000B,\u000C,\u000E-\u001F]", "");
             }

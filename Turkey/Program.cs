@@ -11,7 +11,7 @@ using System.Threading;
 
 namespace Turkey
 {
-    public class Program
+    public static class Program
     {
         public static readonly Option verboseOption = new Option(
             new string[] { "--verbose", "-v" },
@@ -141,11 +141,11 @@ namespace Turkey
 
         public static async Task<string> GenerateNuGetConfigIfNeededAsync(string additionalFeed, Version netCoreAppVersion)
         {
-            var urls = new List<string>();
+            var urls = new List<Uri>();
 
             if (!string.IsNullOrEmpty(additionalFeed))
             {
-                urls.Add(additionalFeed);
+                urls.Add(new Uri(additionalFeed));
             }
 
             using (HttpClient client = new HttpClient())
@@ -153,9 +153,8 @@ namespace Turkey
                 var nuget = new NuGet(client);
                 var sourceBuild = new SourceBuild(client);
                 var prodConUrl = await GetProdConFeedUrlIfNeededAsync(nuget, sourceBuild, netCoreAppVersion);
-                if (!string.IsNullOrEmpty(prodConUrl))
+                if (prodConUrl != null)
                 {
-                    prodConUrl = prodConUrl.Trim();
                     Console.WriteLine($"Packages are not live on nuget.org; using {prodConUrl} as additional package source");
                     urls.Add(prodConUrl);
                 }
@@ -170,8 +169,21 @@ namespace Turkey
             return null;
         }
 
-        public static async Task<string> GetProdConFeedUrlIfNeededAsync(NuGet nuget, SourceBuild sourceBuild, Version netCoreAppVersion)
+        public static async Task<Uri> GetProdConFeedUrlIfNeededAsync(NuGet nuget, SourceBuild sourceBuild, Version netCoreAppVersion)
         {
+            if (nuget == null)
+            {
+                throw new ArgumentNullException(nameof(nuget));
+            }
+            if (sourceBuild == null)
+            {
+                throw new ArgumentNullException(nameof(sourceBuild));
+            }
+            if (netCoreAppVersion == null)
+            {
+                throw new ArgumentNullException(nameof(netCoreAppVersion));
+            }
+
             bool live = await nuget.IsPackageLiveAsync("runtime.linux-x64.Microsoft.NetCore.DotNetAppHost", netCoreAppVersion);
             if (!live)
             {

@@ -16,6 +16,11 @@ namespace Turkey
 
         public async Task WriteAsync(string testName, string standardOutput, string standardError)
         {
+            if (testName == null)
+            {
+                throw new ArgumentNullException(nameof(testName));
+            }
+
             var logFileName = $"logfile-{testName}.log";
             var path = Path.Combine(logDirectory.FullName, logFileName);
             using (StreamWriter sw = new StreamWriter(path, false, Encoding.UTF8))
@@ -26,6 +31,11 @@ namespace Turkey
 
         protected async Task WriteAsync(StreamWriter writer, string standardOutput, string standardError)
         {
+            if (writer == null)
+            {
+                throw new ArgumentNullException(nameof(writer));
+            }
+
             await writer.WriteAsync("# Standard Output:" + Environment.NewLine);
             await writer.WriteAsync(standardOutput);
             await writer.WriteAsync("# Standard Error:" + Environment.NewLine);

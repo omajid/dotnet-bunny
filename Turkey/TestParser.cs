@@ -11,15 +11,24 @@ namespace Turkey
     {
         public Task<(bool Success, Test Test)> TryParseAsync(SystemUnderTest system, string nuGetConfig, FileInfo testConfiguration)
         {
+            if (testConfiguration == null)
+            {
+                throw new ArgumentNullException(nameof(testConfiguration));
+            }
+
             var dir = testConfiguration.Directory;
+            // TODO: async
             return TryParseAsync(system, nuGetConfig, dir, File.ReadAllText(testConfiguration.FullName));
         }
 
         public async Task<(bool Success, Test Test)> TryParseAsync(SystemUnderTest system, string nuGetConfig, DirectoryInfo directory, string testConfiguration)
         {
-            // TODO: async
-            var fileName = Path.Combine(directory.FullName, "test.json");
-            var descriptor = JsonConvert.DeserializeObject<TestDescriptor>(File.ReadAllText(fileName));
+            if (directory == null)
+            {
+                throw new ArgumentNullException(nameof(directory));
+            }
+
+            var descriptor = JsonConvert.DeserializeObject<TestDescriptor>(testConfiguration);
 
             if (!directory.Name.Equals(descriptor.Name, StringComparison.Ordinal))
             {
@@ -43,6 +52,15 @@ namespace Turkey
 
         public bool ShouldRunTest(SystemUnderTest system, TestDescriptor test)
         {
+            if (test == null)
+            {
+                throw new ArgumentNullException(nameof(test));
+            }
+            if (system == null)
+            {
+                throw new ArgumentNullException(nameof(system));
+            }
+
             if (!test.Enabled)
             {
                 return false;
@@ -71,7 +89,7 @@ namespace Turkey
         }
 
 
-        private bool VersionMatches(TestDescriptor test, Version runtimeVersion)
+        static private bool VersionMatches(TestDescriptor test, Version runtimeVersion)
         {
             if (test.VersionSpecific)
             {

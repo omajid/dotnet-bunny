@@ -80,9 +80,14 @@ namespace Turkey
             return;
         }
 
-        public IEnumerable<string> ExpandPath(string pathWithGlob)
+        public static IEnumerable<string> ExpandPath(string pathWithGlob)
         {
-            if (pathWithGlob.StartsWith("~"))
+            if (pathWithGlob == null)
+            {
+                throw new ArgumentNullException(nameof(pathWithGlob));
+            }
+
+            if (pathWithGlob.StartsWith("~", StringComparison.Ordinal))
             {
                 pathWithGlob = Environment.GetEnvironmentVariable("HOME") + pathWithGlob.Substring(1);
             }

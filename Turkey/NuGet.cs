@@ -20,23 +20,28 @@ namespace Turkey
 
         public async Task<bool> IsPackageLiveAsync(string name, Version version)
         {
-            var url = $"https://api-v2v3search-0.nuget.org/autocomplete?id={name}&prerelease=true";
+            var url = new Uri($"https://api-v2v3search-0.nuget.org/autocomplete?id={name}&prerelease=true");
             var result = await _client.GetStringAsync(url);
-            return await IsPackageLiveAsync(name, version, result);
+            return await IsPackageLiveAsync(version, result);
         }
 
-        public async Task<bool> IsPackageLiveAsync(string name, Version version, string json)
+        public async Task<bool> IsPackageLiveAsync(Version version, string json)
         {
             JObject deserialized = (JObject) JsonConvert.DeserializeObject(json);
-            JArray versions = (JArray) deserialized.GetValue("data");
+            JArray versions = (JArray) deserialized.GetValue("data", StringComparison.Ordinal);
             var found = versions.Children<JToken>()
-                .Where(v => v.Value<string>().Equals(version.ToString()))
+                .Where(v => v.Value<string>().Equals(version.ToString(), StringComparison.Ordinal))
                 .Any();
             return found;
         }
 
-        public string GenerateNuGetConfig(List<string> urls)
+        public string GenerateNuGetConfig(List<Uri> urls)
         {
+            if (urls == null)
+            {
+                throw new ArgumentNullException(nameof(urls));
+            }
+
             var sourceParts = new List<string>(urls.Count);
             for (int i = 0; i < urls.Count; i++)
             {

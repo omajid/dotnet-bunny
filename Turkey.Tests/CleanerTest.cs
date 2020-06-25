@@ -21,8 +21,7 @@ namespace Turkey.Tests
                 Directory.CreateDirectory(testDir + "1");
                 Directory.CreateDirectory(testDir + "2");
 
-                Cleaner cleaner = new Cleaner();
-                var expanded = cleaner.ExpandPath(testDir + "*");
+                var expanded = Cleaner.ExpandPath(testDir + "*");
 
                 Assert.Equal(new string[] { testDir + "1", testDir + "2" }.OrderBy(s => s),
                             expanded.OrderBy(s => s));
@@ -36,8 +35,7 @@ namespace Turkey.Tests
         [Fact]
         public void TildeIsExpandedToUserHome()
         {
-            Cleaner cleaner = new Cleaner();
-            var expanded = cleaner.ExpandPath("~");
+            var expanded = Cleaner.ExpandPath("~");
             Assert.Single<string>(expanded);
             Assert.Equal(Environment.GetEnvironmentVariable("HOME"), expanded.First());
         }

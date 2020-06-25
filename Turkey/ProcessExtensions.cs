@@ -8,8 +8,12 @@ namespace Turkey
 {
     public static class ProcessExtensions
     {
-        public static Task WaitForExitAsync(this Process process, CancellationToken token, TextWriter standardOutput, TextWriter standardError)
+        public static Task WaitForExitAsync(this Process process, TextWriter standardOutput, TextWriter standardError, CancellationToken token)
         {
+            if (process == null)
+            {
+                throw new ArgumentNullException(nameof(process));
+            }
 
             var outputHandler = new DataReceivedEventHandler(
                 (sender, e) =>

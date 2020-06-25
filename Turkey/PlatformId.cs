@@ -50,12 +50,12 @@ namespace Turkey
             return lines.Where(line => line.StartsWith(key + "=", StringComparison.Ordinal)).Last().Substring((key + "=").Length);
         }
 
-        private string Unquote(string text)
+        private static string Unquote(string text)
         {
             // TODO implement proper un-escaping
             // This is a limited shell-style syntax described at
             // https://www.freedesktop.org/software/systemd/man/os-release.html
-            if (text.StartsWith("\"") && text.EndsWith("\""))
+            if (text.StartsWith("\"", StringComparison.Ordinal) && text.EndsWith("\"", StringComparison.Ordinal))
             {
                 return text.Substring(1, text.Length - 2);
             }

@@ -58,6 +58,11 @@ namespace Turkey
 
         public async Task<TestResults> ScanAndRunAsync(List<TestOutput> outputs, Func<CancellationTokenSource> GetNewCancellationToken)
         {
+            if (outputs == null)
+            {
+                throw new ArgumentNullException(nameof(outputs));
+            }
+
             await outputs.ForEachAsync(output => output.AtStartupAsync());
 
             TestResults results = new TestResults();
