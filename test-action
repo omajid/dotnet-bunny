@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -euo pipefail
+
+git stash
+git tag -d v99999
+git stash pop
+git commit --amend -a --no-edit
+git tag -a --force v99999 -m "v99999"
+#git push --force-with-lease origin main
+git push --force origin v99999
