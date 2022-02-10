@@ -43,6 +43,30 @@ jobs:
           set -euo pipefail
           make check
 
+  unit-test-mutli-arch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - aarch64
+          - s390x
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: uraimo/run-on-arch-action@v2.1.1
+        name: Run tests
+        with:
+          arch: ${{ matrix.arch }}
+          distro: fedora_latest
+          dockerRunArgs: --security-opt seccomp=unconfined
+          install: |
+            dnf install -y dotnet-sdk-6.0 make
+          run: |
+            set -euo pipefail
+            make check
+
   reproducers:
     name: Verify reproducers work
 
@@ -120,3 +144,43 @@ jobs:
         run: |
           set -euo pipefail
           find -iname '*.log' -exec echo {} \; -exec cat {} \;
+
+  reproducers-test-mutli-arch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - aarch64
+          - s390x
+    steps:
+      # We need to fetch the tags, so 'git tag' in 'make publish' below works
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - uses: uraimo/run-on-arch-action@v2.1.1
+        name: Build test runner and run reproducers
+        with:
+          arch: ${{ matrix.arch }}
+          distro: fedora_latest
+          dockerRunArgs: --security-opt seccomp=unconfined
+          install: |
+            dnf install -y dotnet-sdk-6.0 git make
+          run: |
+            set -euo pipefail
+            make publish
+
+            git clone https://github.com/redhat-developer/dotnet-regular-tests/
+
+            dnf install -y python3 wget \
+              $(grep '^Dependencies: ' dotnet-regular-tests/README.md | cut -d: -f2-) \
+              --skip-broken
+
+            ### HACK: Filter tests that can't pass in Containers
+            rm -r dotnet-regular-tests/debugging-sos-lldb* dotnet-regular-tests/createdump-aspnet dotnet-regular-tests/cgroup-limit
+
+            dotnet --info
+
+            dotnet turkey/Turkey.dll dotnet-regular-tests -v
