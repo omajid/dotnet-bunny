@@ -16,14 +16,16 @@ jobs:
         container_image:
           - quay.io/centos/centos:stream9
           - quay.io/centos/centos:stream10
-          - registry.fedoraproject.org/fedora:40
-          - registry.fedoraproject.org/fedora:41
+          - registry.fedoraproject.org/fedora:42
+          - registry.fedoraproject.org/fedora:43
           - registry.fedoraproject.org/fedora:rawhide
           - registry.access.redhat.com/ubi8
           - registry.access.redhat.com/ubi9
+          - registry.access.redhat.com/ubi10
         dotnet_version:
           - "8.0"
           - "9.0"
+          - "10.0"
           
     container:
       image: ${{ matrix.container_image }}
@@ -39,7 +41,7 @@ jobs:
             dotnet-sdk-dbg-${{ matrix.dotnet_version }} \
             dotnet-runtime-dbg-${{ matrix.dotnet_version }} \
             aspnetcore-runtime-dbg-${{ matrix.dotnet_version }}
-          if [[ ${{ matrix.dotnet_version }} == 9.* ]]; then
+          if [[ ${{ matrix.dotnet_version }} != 8.* ]]; then
             dnf install -y dotnet-sdk-aot-${{ matrix.dotnet_version }}
           fi
 
@@ -78,14 +80,16 @@ jobs:
         container_image:
           - quay.io/centos/centos:stream9
           - quay.io/centos/centos:stream10
-          - registry.fedoraproject.org/fedora:40
-          - registry.fedoraproject.org/fedora:41
+          - registry.fedoraproject.org/fedora:42
+          - registry.fedoraproject.org/fedora:43
           - registry.fedoraproject.org/fedora:rawhide
           - registry.access.redhat.com/ubi8
           - registry.access.redhat.com/ubi9
+          - registry.access.redhat.com/ubi10
         dotnet_version:
           - "8.0"
           - "9.0"
+          - "10.0"
 
     container:
       image: ${{ matrix.container_image }}
@@ -101,7 +105,7 @@ jobs:
             dotnet-sdk-dbg-${{ matrix.dotnet_version }} \
             dotnet-runtime-dbg-${{ matrix.dotnet_version }} \
             aspnetcore-runtime-dbg-${{ matrix.dotnet_version }}
-          if [[ ${{ matrix.dotnet_version }} == 9.* ]]; then
+          if [[ ${{ matrix.dotnet_version }} != 8.* ]]; then
             dnf install -y dotnet-sdk-aot-${{ matrix.dotnet_version }}
           fi
 
@@ -146,4 +150,7 @@ jobs:
         if: ${{ always() }}
         run: |
           set -euo pipefail
+          cat cpuinfo meminfo os-release
+          cat uname
+          cat packages
           find -iname '*.log' -exec echo {} \; -exec cat {} \;
