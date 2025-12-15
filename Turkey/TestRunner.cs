@@ -178,6 +178,27 @@ namespace Turkey
 
             string unameOutput = ProcessRunner.Run("uname", "-a");
             File.WriteAllText(Path.Combine(logDir, "uname"), unameOutput);
+
+            try
+            {
+                string installedPackages = ProcessRunner.Run("rpm", "--query", "--all");
+                File.WriteAllText(Path.Combine(logDir, "packages"), installedPackages);
+            }
+            catch (InvalidOperationException e)
+            {
+                string error = e.Message;
+                try
+                {
+                    string installedPackages = ProcessRunner.Run("apk", "list", "--installed");
+                    File.WriteAllText(Path.Combine(logDir, "packages"), installedPackages);
+                }
+                catch (InvalidOperationException e2)
+                {
+                    error = error + Environment.NewLine + e2.Message;
+                    string installedPackages = "could not find installed packages" + Environment.NewLine + error;
+                    File.WriteAllText(Path.Combine(logDir, "packages"), installedPackages);
+                }
+            }
         }
     }
 }
