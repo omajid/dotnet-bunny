@@ -14,10 +14,12 @@ jobs:
       fail-fast: false
       matrix:
         container_image:
+          - docker.io/library/alpine:latest
+          - docker.io/library/alpine:edge
           - quay.io/centos/centos:stream9
           - quay.io/centos/centos:stream10
-          - registry.fedoraproject.org/fedora:42
           - registry.fedoraproject.org/fedora:43
+          - registry.fedoraproject.org/fedora:44
           - registry.fedoraproject.org/fedora:rawhide
           - registry.access.redhat.com/ubi8
           - registry.access.redhat.com/ubi9
@@ -26,7 +28,7 @@ jobs:
           - "8.0"
           - "9.0"
           - "10.0"
-          
+
     container:
       image: ${{ matrix.container_image }}
       options: --security-opt seccomp=unconfined
@@ -36,13 +38,21 @@ jobs:
         timeout-minutes: 5
         run: |
           set -euo pipefail
-          dnf install -y dotnet-sdk-${{ matrix.dotnet_version }} git make
-          dnf install -y \
-            dotnet-sdk-dbg-${{ matrix.dotnet_version }} \
-            dotnet-runtime-dbg-${{ matrix.dotnet_version }} \
-            aspnetcore-runtime-dbg-${{ matrix.dotnet_version }}
-          if [[ ${{ matrix.dotnet_version }} != 8.* ]]; then
-            dnf install -y dotnet-sdk-aot-${{ matrix.dotnet_version }}
+          # grep fedora matches Fedora, CentOS, and RHEL/UBI (via ID_LIKE="fedora")
+          if grep fedora /etc/os-release; then
+            dnf install -y dotnet-sdk-${{ matrix.dotnet_version }} git make
+            if [[ ${{ matrix.dotnet_version }} != 8.* ]]; then
+              dnf install -y dotnet-sdk-aot-${{ matrix.dotnet_version }}
+            fi
+          elif grep alpine /etc/os-release; then
+            if grep edge /etc/os-release; then
+              echo "https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
+            fi
+            apk upgrade -a
+            apk add bash git make dotnet-sdk-${{ matrix.dotnet_version }}
+            if [[ ${{ matrix.dotnet_version }} != 8.* ]]; then
+              apk add dotnet-sdk-aot-${{ matrix.dotnet_version }}
+            fi
           fi
 
       - uses: actions/checkout@v2
@@ -78,10 +88,12 @@ jobs:
       fail-fast: false
       matrix:
         container_image:
+          - docker.io/library/alpine:latest
+          - docker.io/library/alpine:edge
           - quay.io/centos/centos:stream9
           - quay.io/centos/centos:stream10
-          - registry.fedoraproject.org/fedora:42
           - registry.fedoraproject.org/fedora:43
+          - registry.fedoraproject.org/fedora:44
           - registry.fedoraproject.org/fedora:rawhide
           - registry.access.redhat.com/ubi8
           - registry.access.redhat.com/ubi9
@@ -100,13 +112,30 @@ jobs:
         timeout-minutes: 5
         run: |
           set -euo pipefail
-          dnf install -y dotnet-sdk-${{ matrix.dotnet_version }} git make
-          dnf install -y \
-            dotnet-sdk-dbg-${{ matrix.dotnet_version }} \
-            dotnet-runtime-dbg-${{ matrix.dotnet_version }} \
-            aspnetcore-runtime-dbg-${{ matrix.dotnet_version }}
-          if [[ ${{ matrix.dotnet_version }} != 8.* ]]; then
-            dnf install -y dotnet-sdk-aot-${{ matrix.dotnet_version }}
+          # grep fedora matches Fedora, CentOS, and RHEL/UBI (via ID_LIKE="fedora")
+          if grep fedora /etc/os-release; then
+            dnf install -y dotnet-sdk-${{ matrix.dotnet_version }} git make
+            dnf install -y \
+              dotnet-sdk-dbg-${{ matrix.dotnet_version }} \
+              dotnet-runtime-dbg-${{ matrix.dotnet_version }} \
+              aspnetcore-runtime-dbg-${{ matrix.dotnet_version }}
+            if [[ ${{ matrix.dotnet_version }} != 8.* ]]; then
+              dnf install -y dotnet-sdk-aot-${{ matrix.dotnet_version }}
+            fi
+          elif grep alpine /etc/os-release; then
+            if grep edge /etc/os-release; then
+              echo "https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
+            fi
+            apk upgrade -a
+            # dotnet-doc provides man pages tested by some reproducers
+            apk add bash git make dotnet-sdk-${{ matrix.dotnet_version }} dotnet-doc
+            apk add \
+              dotnet-sdk-dbg-${{ matrix.dotnet_version }} \
+              dotnet-runtime-dbg-${{ matrix.dotnet_version }} \
+              aspnetcore-runtime-dbg-${{ matrix.dotnet_version }}
+            if [[ ${{ matrix.dotnet_version }} != 8.* ]]; then
+              apk add dotnet-sdk-aot-${{ matrix.dotnet_version }}
+            fi
           fi
 
       # We need to fetch the tags, so 'git tag' in 'make publish' below works
@@ -129,22 +158,34 @@ jobs:
       - name: Install Test dependencies
         timeout-minutes: 2
         run: |
-          dnf install -y python3 wget $(grep '^Dependencies(dnf): ' dotnet-regular-tests/README.md | cut -d: -f2-) --skip-broken
+          set -euo pipefail
+          # grep fedora matches Fedora, CentOS, and RHEL/UBI (via ID_LIKE="fedora")
+          if grep fedora /etc/os-release; then
+            dnf install -y python3 wget $(grep '^Dependencies(dnf): ' dotnet-regular-tests/README.md | cut -d: -f2-) --skip-broken
+          elif grep alpine /etc/os-release; then
+            apk add python3 wget curl $(grep '^Dependencies(apk): ' dotnet-regular-tests/README.md | cut -d: -f2-)
+            echo -e '[PostgreSQL]\nDescription=PostgreSQL Unicode\nDriver=/usr/lib/psqlodbcw.so\nUsageCount=1' > /etc/odbcinst.ini
+          fi
 
       - name: Run reproducers
+        shell: bash
         run: |
           set -euo pipefail
-          ### HACK: Filter tests that can't pass in Containers
-          rm -r dotnet-regular-tests/debugging-sos-lldb* dotnet-regular-tests/createdump-aspnet dotnet-regular-tests/cgroup-limit
 
-          ### HACK: UBI 8 is missing strace and bash-completion packages for these tests
-          if [[ ${{ matrix.container_image }} == *ubi* ]] ; then
-              rm -r dotnet-regular-tests/telemetry-is-off-by-default dotnet-regular-tests/bash-completion dotnet-regular-tests/system-data-odbc
+          trait_flags=()
+
+          if [[ ${{ matrix.container_image }} == *ubi8 ]] ; then
+              trait_flags+=( --trait ubi8-repos )
+          fi
+          if [[ ${{ matrix.container_image }} == *ubi9 ]] ; then
+              trait_flags+=( --trait ubi9-repos )
+          fi
+          if [[ ${{ matrix.container_image }} == *ubi10 ]] ; then
+              trait_flags+=( --trait ubi10-repos )
           fi
 
           dotnet --info
-
-          dotnet turkey/Turkey.dll dotnet-regular-tests -v --timeout 600
+          dotnet turkey/Turkey.dll dotnet-regular-tests -v --timeout 600 --trait github-ci "${trait_flags[@]}"
 
       - name: Show Logs
         if: ${{ always() }}

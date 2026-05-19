@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -184,7 +185,7 @@ namespace Turkey
                 string installedPackages = ProcessRunner.Run("rpm", "--query", "--all");
                 File.WriteAllText(Path.Combine(logDir, "packages"), installedPackages);
             }
-            catch (InvalidOperationException e)
+            catch (Exception e) when (e is InvalidOperationException or Win32Exception)
             {
                 string error = e.Message;
                 try
@@ -192,7 +193,7 @@ namespace Turkey
                     string installedPackages = ProcessRunner.Run("apk", "list", "--installed");
                     File.WriteAllText(Path.Combine(logDir, "packages"), installedPackages);
                 }
-                catch (InvalidOperationException e2)
+                catch (Exception e2) when (e2 is InvalidOperationException or Win32Exception)
                 {
                     error = error + Environment.NewLine + e2.Message;
                     string installedPackages = "could not find installed packages" + Environment.NewLine + error;
